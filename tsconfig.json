@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "sourceMap": true,
+        "noImplicitAny": false,
+        "moduleResolution": "node",
+        "module": "commonjs",
+        "declaration": true,
+        "target": "es5",
+        "allowJs": false,
+        "experimentalDecorators": true,
+        "lib": ["dom", "es5", "scripthost", "es2017"]
+    },
+    "include": [
+        "**/*.ts"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}
