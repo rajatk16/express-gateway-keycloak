@@ -1,12 +1,25 @@
-import * as Eg from "express-gateway";
-import { keycloakRouteExtension } from "./KeycloakRoutes";
+import * as eg from "express-gateway";
+import * as express from "express";
+import * as Keycloak from "keycloak-connect";
+const session = require("express-session");
 
-class KeycloakPlugin implements ExpressGateway.Plugin {
-    get version() {
-        return "0.0.5";
-    }
-    init(ctx : ExpressGateway.PluginContext) {
-        ctx.registerGatewayRoute(keycloakRouteExtension);
+const KeycloakPlugin : ExpressGateway.Plugin = {
+    version: "1.2.0",
+    init: (ctx : ExpressGateway.PluginContext) => {
+        const memoryStore = new session.MemoryStore();
+        const keycloak = new Keycloak({ store: memoryStore });
+        // setup our keycloak middleware
+        ctx.registerGatewayRoute(app => {
+            // TODO: the secret from some config
+            app.use(session({ secret: "dunno", cookie: { maxAge: 60000 }}));
+            app.use(keycloak.middleware());
+        });
+        ctx.registerPolicy({
+            name: "keycloak",
+            policy: (actionParams : any) : express.RequestHandler => {
+                return keycloak.protect(actionParams.role);
+            }
+        });
     }
 }
 
