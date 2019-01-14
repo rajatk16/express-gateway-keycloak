@@ -8,7 +8,7 @@
         "target": "es5",
         "allowJs": false,
         "experimentalDecorators": true,
-        "lib": ["dom", "es5", "scripthost", "es2017"]
+        "lib": ["es5", "scripthost", "es2017"]
     },
     "include": [
         "**/*.ts"

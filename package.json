@@ -1,21 +1,22 @@
 {
   "name": "express-gateway-keycloak",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Keycloak plugin for express gateway",
   "main": "manifest.js",
   "scripts": {
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc"
   },
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "keycloak-connect": "^4.8.2",
+    "memorystore": "^1.6.0"
+  },
+  "devDependencies": {
     "@types/express": "^4.16.0",
     "@types/node": "^10.12.18",
-    "express-gateway": "^1.14.0",
+    "typescript": "^3.2.2",
     "json-schema": "^0.2.3",
-    "keycloak-connect": "^4.8.2",
-    "memorystore": "^1.6.0",
-    "typescript": "^3.2.2"
+    "express-gateway": "^1.14.0"
   }
 }
