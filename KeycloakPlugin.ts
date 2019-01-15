@@ -12,27 +12,26 @@ interface IKeycloakPlugin extends ExpressGateway.Plugin {
 
 const KeycloakPlugin : IKeycloakPlugin = {
     version: "1.2.0",
-    policies: ["keycloak"],
+    policies: ["keycloak-protect"],
     sessionSecret: "kc_secret",
     init: (ctx : ExpressGateway.PluginContext) => {
         const sessionStore = new MemoryStore();
         const keycloak = new Keycloak({ store: sessionStore });
         // setup our keycloak middleware
         ctx.registerGatewayRoute(app => {
-            // TODO: the secret from some config
             app.use(session({ store: sessionStore, secret: KeycloakPlugin.sessionSecret }));
             app.use(keycloak.middleware());
         });
         ctx.registerPolicy({
-            name: "keycloak",
+            name: "keycloak-protect",
             schema: {
+                $id: "http://express-gateway.io/schemas/policy/keycloak-protect.json",
                 type: "object",
                 properties: {
                     role: {
                         title: "role",
                         description: "the keycloak role to restrict access to",
-                        type: "string",
-                        required: false
+                        type: "string"
                     }
                 }
             },
@@ -40,6 +39,17 @@ const KeycloakPlugin : IKeycloakPlugin = {
                 return keycloak.protect(actionParams.role);
             }
         });
+    },
+    schema: {
+        $id: "http://express-gateway.io/schemas/plugin/keycloak.json",
+        type: "object",
+        properties: {
+            sessionSecret: {
+                title: "Session Secret",
+                description: "The secret to use in encrypting the session cookie",
+                type: "string"
+            }
+        }
     }
 }
 
