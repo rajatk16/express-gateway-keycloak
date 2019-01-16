@@ -7,19 +7,19 @@ import * as createMemoryStore from "memorystore";
 const MemoryStore = createMemoryStore(session);
 
 interface IKeycloakPlugin extends ExpressGateway.Plugin {
-    sessionSecret: string;
+    sessionSecret?: string;
+    keycloakConfig?: any;
 }
 
 const KeycloakPlugin : IKeycloakPlugin = {
     version: "1.2.0",
     policies: ["keycloak-protect"],
-    sessionSecret: "kc_secret",
     init: (ctx : ExpressGateway.PluginContext) => {
         const sessionStore = new MemoryStore();
-        const keycloak = new Keycloak({ store: sessionStore });
+        const keycloak = new Keycloak({ store: sessionStore }, KeycloakPlugin.keycloakConfig);
         // setup our keycloak middleware
         ctx.registerGatewayRoute(app => {
-            app.use(session({ store: sessionStore, secret: KeycloakPlugin.sessionSecret }));
+            app.use(session({ store: sessionStore, secret: KeycloakPlugin.sessionSecret || "kc_secret" }));
             app.use(keycloak.middleware());
         });
         ctx.registerPolicy({
@@ -48,12 +48,18 @@ const KeycloakPlugin : IKeycloakPlugin = {
                 title: "Session Secret",
                 description: "The secret to use in encrypting the session cookie",
                 type: "string"
+            },
+            keycloakConfig: {
+                title: "Keycloak Configuration",
+                description: "This can be used rather than requiring keycloak.json to be present",
+                type: "object"
             }
         }
     }
 }
 
 export {
+    IKeycloakPlugin,
     KeycloakPlugin,
     KeycloakPlugin as default
 }
