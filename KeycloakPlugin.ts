@@ -1,25 +1,36 @@
 import * as eg from "express-gateway";
+import { createLoggerWithLabel } from "express-gateway/lib/logger"; 
 import * as express from "express";
 import * as Keycloak from "keycloak-connect";
 import * as session from "express-session";
 import * as createMemoryStore from "memorystore";
 
+const logger = createLoggerWithLabel("[EG:plugin:keycloak]");
+
 const MemoryStore = createMemoryStore(session);
 
-interface IKeycloakPlugin extends ExpressGateway.Plugin {
+interface IKeycloakPluginSettings {
     sessionSecret?: string;
     keycloakConfig?: any;
 }
 
-const KeycloakPlugin : IKeycloakPlugin = {
+const DefaultKeycloakPluginSettings : IKeycloakPluginSettings = {
+    sessionSecret: "kc_secret"
+};
+
+const KeycloakPlugin : ExpressGateway.Plugin = {
     version: "1.2.0",
     policies: ["keycloak-protect"],
     init: (ctx : ExpressGateway.PluginContext) => {
+        // this is slightly dodgy casting, as they don't expose settings on the public interface - but not sure how else you can access custom settings for a plugin
+        const pluginSettings : IKeycloakPluginSettings = Object.assign({}, DefaultKeycloakPluginSettings, (ctx as any).settings as IKeycloakPluginSettings);
+        logger.info(`Initialising Keycloak Plugin with settings: ${JSON.stringify(pluginSettings, null, "\t")}`);
         const sessionStore = new MemoryStore();
-        const keycloak = new Keycloak({ store: sessionStore }, KeycloakPlugin.keycloakConfig);
+        const keycloak = new Keycloak({ store: sessionStore }, pluginSettings.keycloakConfig);
         // setup our keycloak middleware
         ctx.registerGatewayRoute(app => {
-            app.use(session({ store: sessionStore, secret: KeycloakPlugin.sessionSecret || "kc_secret" }));
+            logger.info("Registering Keycloak Middleware");
+            app.use(session({ store: sessionStore, secret: pluginSettings.sessionSecret }));
             app.use(keycloak.middleware());
         });
         ctx.registerPolicy({
@@ -59,7 +70,8 @@ const KeycloakPlugin : IKeycloakPlugin = {
 }
 
 export {
-    IKeycloakPlugin,
+    IKeycloakPluginSettings,
+    DefaultKeycloakPluginSettings,
     KeycloakPlugin,
     KeycloakPlugin as default
 }
