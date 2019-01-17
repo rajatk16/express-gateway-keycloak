@@ -49,11 +49,27 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
                     role: {
                         description: "the keycloak role to restrict access to",
                         type: "string"
+                    },
+                    jsProtectTokenVar: {
+                        description: "the keycloak token variable name to reference the token in jsProtect",
+                        type: "string"
+                    },
+                    jsProtect: {
+                        description: "a js snippet to apply for whether a user has access.",
+                        type: "string"
                     }
                 }
             },
             policy: (actionParams : any) : express.RequestHandler => {
                 logger.info(`-- Keycloak Protect: ${JSON.stringify(actionParams, null, "\t")}`);
+                if(actionParams.jsProtect) {
+                    return keycloak.protect((token, req) => {
+                        req.egContext[actionParams.jsProtectTokenVar || "token"] = token;
+                        const runResult = req.egContext.run(actionParams.jsProtect);
+                        logger.info("-- Keycloak Protect JS Result: " + runResult);
+                        return runResult;
+                    });
+                }
                 return keycloak.protect(actionParams.role);
             }
         });
