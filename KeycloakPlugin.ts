@@ -23,10 +23,17 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
     policies: ["keycloak-protect"],
     init: (ctx : ExpressGateway.PluginContext) => {
         // this is slightly dodgy casting, as they don't expose settings on the public interface - but not sure how else you can access custom settings for a plugin
-        const pluginSettings : IKeycloakPluginSettings = Object.assign({}, DefaultKeycloakPluginSettings, (ctx as any).settings as IKeycloakPluginSettings);
+        const pluginSettings : IKeycloakPluginSettings = { ...DefaultKeycloakPluginSettings, ...(ctx as any).settings };
         logger.info(`Initialising Keycloak Plugin with settings: ${JSON.stringify(pluginSettings, null, "\t")}`);
         const sessionStore = new MemoryStore();
         const keycloak = new Keycloak({ store: sessionStore }, pluginSettings.keycloakConfig);
+        keycloak.authenticated = (req) => {
+            logger.info("-- Keycloak Authenticated: " + JSON.stringify(req.kauth.grant.access_token.content, null, "\t"));
+        };
+        keycloak.accessDenied = (req, res) => {
+            logger.info("-- Keycloak Access Denied");
+            res.status(403).end("Access Denied");
+        };
         // setup our keycloak middleware
         ctx.registerGatewayRoute(app => {
             logger.info("Registering Keycloak Middleware");
@@ -36,17 +43,17 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
         ctx.registerPolicy({
             name: "keycloak-protect",
             schema: {
-                $id: "http://express-gateway.io/schemas/policy/keycloak-protect.json",
+                $id: "http://express-gateway.io/schemas/policies/keycloak-protect.json",
                 type: "object",
                 properties: {
                     role: {
-                        title: "role",
                         description: "the keycloak role to restrict access to",
                         type: "string"
                     }
                 }
             },
             policy: (actionParams : any) : express.RequestHandler => {
+                logger.info(`-- Keycloak Protect: ${JSON.stringify(actionParams, null, "\t")}`);
                 return keycloak.protect(actionParams.role);
             }
         });
