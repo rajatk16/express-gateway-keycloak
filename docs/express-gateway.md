@@ -341,7 +341,7 @@ To setup the project:
 Before we can make use of keycloak to protect the sample endpoint, we need to have [keycloak setup](./keycloak-basic-setup.md).
 
 ### System Config
-Ensure that the plugin is enabled in ```config/system.config.yml```.
+Ensure that the plugin is enabled in [config/system.config.yml](https://www.express-gateway.io/docs/configuration/system.config.yml/).
 Using ```eg plugins install express-gateway-keycloak``` gives you the option of updating both the configurations to enable the plugin and policies provided by the plugin.
 
 ```yml
@@ -370,7 +370,7 @@ plugins:
 ```
 
 ### Gateway Config
-Now that the plugin is enabled and configured appropriately, we can configure the gateway with the updated pipeline. Ensure the **keycloak-protect** policy is enabled in **config/gateway.config.yml** as follows:
+Now that the plugin is enabled and configured appropriately, we can configure the gateway with the updated pipeline. Ensure the **keycloak-protect** policy is enabled in [config/gateway.config.yml](https://www.express-gateway.io/docs/configuration/gateway.config.yml/) as follows:
 
 ```yml
 policies:
@@ -456,7 +456,7 @@ pipelines:
     policies:
       - keycloak-protect:
         - action:
-            jsProtect: `token.hasRole("sample") || token.hasRole("gimme")`
+            jsProtect: 'token.hasRole("sample") || token.hasRole("gimme")'
       - expression:
         - action:
             jscode: 'req.headers["x-kc-user-email"] = req.kauth.grant.access_token.content.email; req.headers["x-kc-username"] = req.kauth.grant.access_token.content.preferred_username;'
@@ -466,17 +466,45 @@ pipelines:
             changeOrigin: true
 ```
 
-### What's next
+## [expres gateway tls configuration](#express-gateway-tls)
+1. Get or generate a new root CA key and certificate
+```
+openssl genrsa -out rootCA.key 2048
+openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1024 -out rootCA.pem
+```
 
+2. Generate a server key and certificate signing request, then sign to get our server certificate:
 
+```
+openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr
+openssl x509 -req -days 365 -in server.csr -CA rootCA.pem -CAkey rootCA.key -set_serial 01 -out server.crt
+```
 
+3. Update the gateway config to include https settings as follows:
 
+```yaml
+https:
+  port: 8443
+  tls:
+    default:
+      key: "server.key"
+      cert: "server.crt"
+```
 
+To use this with keycloak, keycloak will also have to be configured securely - this is outlined in the [keycloak basic setup](./keycloak-basic-setup.md).
 
+We'll need to update our system.config.yml and update the keycloak plugin configuration to indicate a secure url as follows:
+```yaml
+plugins:
+  express-gateway-keycloak:
+    package: express-gateway-keycloak
+    keycloakConfig:
+      realm: sample
+      auth-server-url: "https://localhost:9443/auth"
+      ssl-required: external
+      resource: express-gateway
+      public-client: true
+      confidential-port: 0
+```
 
-
-
-
-
-
-
+## What's next

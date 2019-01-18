@@ -83,4 +83,84 @@ To configure a new realm in keycloak:
 
 Under a realm, we need to configure clients (applications) that will make use of keycloak for authentication and authorisation, typically using Open Id Connect, but SAML is available as well.
 
-More to come...
+### [Setting up SSL/HTTPS](#keycloak-ssl)
+This is outlined [here](https://www.keycloak.org/docs/latest/server_installation/index.html#setting-up-https-ssl). By default, keycloak is setup to listen on https using a self-signed certificate.
+
+You'll have to change any of the client setting configurations to use https for valid redirect URIs and so on.
+
+#### Keycloak connect and self signed certificates
+[Keycloak Connect](https://github.com/keycloak/keycloak-nodejs-connect) makes use of the standard node.js https library for tls. The node library doesn't play well with self-signed certificates. The following sections cover some options:
+
+##### Get a certificate signed by a CA - you'll do this in production. The example below uses our own rootCA and signs the keycloak server certificate:
+1. Get or generate a new root CA key and certificate
+
+    ```
+    openssl genrsa -out rootCA.key 2048
+    openssl req -x509 -new -nodes -key rootCA.key -sha256 -days 1024 -out rootCA.pem
+    ```
+
+2. Generate a server key and certificate signing request, then sign to get our server certificate:
+
+    ```
+    openssl req -nodes -newkey rsa:2048 -keyout server.key -out server.csr
+    openssl x509 -req -days 365 -in server.csr -CA rootCA.pem -CAkey rootCA.key -set_serial 01 -out server.crt
+    ```
+
+3. Import the root certificate using keytool
+
+    ```
+    keytool -import -keystore keycloak.jks -file rootCA.pem -alias root
+    ```
+
+4. Generate a server certificate and private key package
+
+    ```
+    openssl pkcs12 -export -in server.crt -inkey server.key -name localhost -out server.p12
+    ```
+
+5. Import the server certificate and private key package using keytool
+
+    ```
+    keytool -importkeystore -deststorepass keycloak -destkeystore keycloak.jks -srckeystore server.p12 -srcstoretype PKCS12
+    ```
+
+6. Configure the keystore (this is specific to standalone mode)
+
+    - Copy keycloak.jks to $keycloak_home/standalone/configuration
+
+    - Modify $keycloak_home/standalone/configuration/standalone.xml
+
+        ```xml
+        <security-realm name="ApplicationRealm">
+            <server-identities>
+                <ssl>
+                    <keystore path="keycloak.jks" relative-to="jboss.server.config.dir" keystore-password="keycloak" alias="localhost" key-password="keycloak"/>
+                </ssl>
+            </server-identities>
+            <authentication>
+                <local default-user="$local" allowed-users="*" skip-group-loading="true"/>
+                <properties path="application-users.properties" relative-to="jboss.server.config.dir"/>
+            </authentication>
+            <authorization>
+                <properties path="application-roles.properties" relative-to="jboss.server.config.dir"/>
+            </authorization>
+        </security-realm>
+        ```
+
+
+7. We'll have to add the additional root CA certificate to node's extra ca certificates
+
+    - On windows:
+
+        ```
+        set NODE_EXTRA_CA_CERTS=/path/to/rootCA.pem
+        ```
+
+    - On unix:
+
+        ```
+        export NODE_EXTRA_CA_CERTS=/path/to/rootCA.pem
+        ```
+        
+
+
