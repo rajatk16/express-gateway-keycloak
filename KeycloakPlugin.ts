@@ -11,6 +11,7 @@ const MemoryStore = createMemoryStore(session);
 
 interface IKeycloakPluginSettings {
     sessionSecret?: string;
+    cookie?: any;
     keycloakConfig?: any;
 }
 
@@ -82,6 +83,11 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
                 title: "Session Secret",
                 description: "The secret to use in encrypting the session cookie",
                 type: "string"
+            },
+            cookie: {
+                title: "Cookie Settings",
+                description: "Cookie settings for the session",
+                type: "object"
             },
             keycloakConfig: {
                 title: "Keycloak Configuration",
