@@ -10,13 +10,14 @@ const logger = createLoggerWithLabel("[EG:plugin:keycloak]");
 const MemoryStore = createMemoryStore(session);
 
 interface IKeycloakPluginSettings {
-    sessionSecret?: string;
-    cookie?: any;
+    session?: any;
     keycloakConfig?: any;
 }
 
 const DefaultKeycloakPluginSettings : IKeycloakPluginSettings = {
-    sessionSecret: "kc_secret"
+    session: {
+        secret: "kc_secret"
+    }
 };
 
 const KeycloakPlugin : ExpressGateway.Plugin = {
@@ -24,23 +25,31 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
     policies: ["keycloak-protect"],
     init: (ctx : ExpressGateway.PluginContext) => {
         // this is slightly dodgy casting, as they don't expose settings on the public interface - but not sure how else you can access custom settings for a plugin
-        const pluginSettings : IKeycloakPluginSettings = { ...DefaultKeycloakPluginSettings, ...(ctx as any).settings };
-        logger.info(`Initialising Keycloak Plugin with settings: ${JSON.stringify(pluginSettings, null, "\t")}`);
         const sessionStore = new MemoryStore();
+        const rawSettings : IKeycloakPluginSettings = (ctx as any).settings;
+        const sessionSettings = { ...DefaultKeycloakPluginSettings.session, ...rawSettings.session, store: sessionStore };
+        const keycloakConfig = { ...DefaultKeycloakPluginSettings.keycloakConfig, ...rawSettings.keycloakConfig };
+        const pluginSettings : IKeycloakPluginSettings = { session: sessionSettings, keycloakConfig: keycloakConfig };
         const keycloak = new Keycloak({ store: sessionStore }, pluginSettings.keycloakConfig);
+        
+        logger.info(`Initialized Keycloak Plugin with settings: ${JSON.stringify(pluginSettings, null, "\t")}`);
+        
         keycloak.authenticated = (req) => {
             logger.info("-- Keycloak Authenticated: " + JSON.stringify(req.kauth.grant.access_token.content, null, "\t"));
         };
+        
         keycloak.accessDenied = (req, res) => {
             logger.info("-- Keycloak Access Denied");
             res.status(403).end("Access Denied");
         };
+        
         // setup our keycloak middleware
         ctx.registerGatewayRoute(app => {
             logger.info("Registering Keycloak Middleware");
-            app.use(session({ store: sessionStore, secret: pluginSettings.sessionSecret }));
+            app.use(session(pluginSettings.session));
             app.use(keycloak.middleware());
         });
+        
         ctx.registerPolicy({
             name: "keycloak-protect",
             schema: {
@@ -79,14 +88,9 @@ const KeycloakPlugin : ExpressGateway.Plugin = {
         $id: "http://express-gateway.io/schemas/plugin/keycloak.json",
         type: "object",
         properties: {
-            sessionSecret: {
-                title: "Session Secret",
-                description: "The secret to use in encrypting the session cookie",
-                type: "string"
-            },
-            cookie: {
-                title: "Cookie Settings",
-                description: "Cookie settings for the session",
+            session: {
+                title: "Session Settings",
+                description: "Session Settings as outlined by express middleware",
                 type: "object"
             },
             keycloakConfig: {
