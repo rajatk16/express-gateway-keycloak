@@ -1,3 +1,3 @@
-import KeycloakPlugin from "./KeycloakPlugin"
+import KeycloakPlugin from './KeycloakPlugin';
 
 export = KeycloakPlugin;
