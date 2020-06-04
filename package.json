@@ -1,6 +1,6 @@
 {
   "name": "express-gateway-keycloak",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "description": "Keycloak plugin for express gateway",
   "main": "manifest.js",
   "types": "manifest.d.ts",
