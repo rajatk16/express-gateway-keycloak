@@ -22,7 +22,7 @@ keycloakConfig:
     bearer-only: false
     client-id: "..."
     confidential-port: 0
-    realmPublicKey: "..."
+    realm-public-key: "..."
 ```
 
 * add to `gateway.config.yml`
@@ -62,7 +62,7 @@ You want to apply different authentication strategies depending endpoints (ex: m
       confidential-port: 0
       client-id: "..."
       secret: "..."
-      realmPublicKey: "..."
+      realm-public-key: "..."
 
   express-gateway-keycloak-admin:
     package: express-gateway-keycloak
@@ -79,7 +79,7 @@ You want to apply different authentication strategies depending endpoints (ex: m
       public-client: true
       client-id: "..."
       confidential-port: 0
-      realmPublicKey: "..."
+      realm-public-key: "..."
 
 ```
 
